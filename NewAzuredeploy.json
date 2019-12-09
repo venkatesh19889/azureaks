@@ -1,0 +1,137 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.1",
+    "parameters": {
+        "clusterName": {
+            "type": "string",
+            "defaultValue":"akscluster",
+            "metadata": {
+                "description": "The name of the Managed Cluster resource."
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "The location of the Managed Cluster resource."
+            }
+        },
+        "dnsPrefix": {
+            "type": "string",
+	    "defaultValue": "softobizAKSCluster",
+            "metadata": {
+                "description": "Optional DNS prefix to use with hosted Kubernetes API server FQDN."
+            }
+        },
+        "osDiskSizeGB": {
+            "type": "int",
+            "defaultValue": 0,
+            "metadata": {
+                "description": "Disk size (in GB) to provision for each of the agent pool nodes. This value ranges from 0 to 1023. Specifying 0 will apply the default disk size for that agentVMSize."
+            },
+            "minValue": 0,
+            "maxValue": 1023
+        },
+        "agentCount": {
+            "type": "int",
+            "defaultValue": 3,
+            "metadata": {
+                "description": "The number of nodes for the cluster."
+            },
+            "minValue": 1,
+            "maxValue": 50
+        },
+        "agentVMSize": {
+            "type": "string",
+            "defaultValue": "Standard_DS2_v2",
+            "metadata": {
+                "description": "The size of the Virtual Machine."
+            }
+        },
+        "linuxAdminUsername": {
+            "type": "string",
+	    "defaultValue": "softobiz",
+            "metadata": {
+                "description": "User name for the Linux Virtual Machines"
+            }
+        },
+        "sshRSAPublicKey": {
+            "type": "string",
+	    "defaultValue": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDLUj/hyooRJWu+znibOFdfliqGI3srDzPOAFkUlSp33qUz+Rcr7ijeHnMzMfR/XD2e04vOju/t1UbEut4Y5RIyMmzY0aTERDaECfagXtRcI/Dn8um3jljw0E2Xr3nrWpZ6Qcz+MFRq+7p8WuDMWdoeHhyWMx4sii3Wpv1cKMyeDtGzme/cM3ZdKakEho/tKEQR7Po6TwcZnpj7m6emFFsEJw6DW1In4XaiSg/hLqPA9Q5nCpQl/gb9oqC9coqgtG0Qhm44w6hnEhxd4jGnj27MVL/oxxMRTvkUFKaeHtagO3xMwHLbbRRF9CfdAb/ZNYZYGpe5Z1V0G8ll9HBsIqIM8sjheoLSmUrSNh/03sMdTRWK7BQfgR4s+alkfOZlVCmj6UUf8U6czXa0EujU15ubGy7eu905szqspB/h2plM4WrR8lZsBZnHvrFax+lhGjPx9XVWOjK5aF20LylYPk8mj4EAVYublh8G7LB5eKLjsj73TS7NfFMY0aLZjLuo07ZWpjvZgiasLAbvzPHeY9Ri1KkJD1KtNmYsc7JSCVFXLQyYre7B/CJz/Jh8C9uWrWHy96/3VXg1d10YWkKZowxargH7xv3l8QD1ZnzEylCXMghdIuRqZF3wqPIlJ5HFF/BXlTZuHSIsNEZJvUw0iCfv1hhtQUS026/E79yl2op8oQ== ubuntu@worker",
+            "metadata": {
+                "description": "Configure all linux machines with the SSH RSA public key string. Your key should include three parts, for example 'ssh-rsa AAAAB...snip...UcyupgH azureuser@linuxvm'"
+	    }
+        },
+        "servicePrincipalClientId": {
+            "metadata": {
+                "description": "Client ID (used by cloudprovider)"
+            },
+            "type": "securestring"
+        },
+        "servicePrincipalClientSecret": {
+            "metadata": {
+                "description": "The Service Principal Client Secret."
+            },
+            "type": "securestring"
+        },
+        "osType": {
+            "type": "string",
+            "defaultValue": "Linux",
+            "allowedValues": [
+                "Linux"
+            ],
+            "metadata": {
+                "description": "The type of operating system."
+            }
+        },
+        "kubernetesVersion": {
+            "type": "string",
+            "defaultValue": "1.15.4",
+            "metadata": {
+                "description": "The version of Kubernetes."
+            }
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2018-03-31",
+            "type": "Microsoft.ContainerService/managedClusters",
+            "location": "[parameters('location')]",
+            "name": "[parameters('clusterName')]",
+            "properties": {
+                "kubernetesVersion": "[parameters('kubernetesVersion')]",
+                "dnsPrefix": "[parameters('dnsPrefix')]",
+                "agentPoolProfiles": [
+                    {
+                        "name": "agentpool",
+                        "osDiskSizeGB": "[parameters('osDiskSizeGB')]",
+                        "count": "[parameters('agentCount')]",
+                        "vmSize": "[parameters('agentVMSize')]",
+                        "osType": "[parameters('osType')]",
+                        "storageProfile": "ManagedDisks"
+                    }
+                ],
+                "linuxProfile": {
+                    "adminUsername": "[parameters('linuxAdminUsername')]",
+                    "ssh": {
+                        "publicKeys": [
+                            {
+                                "keyData": "[parameters('sshRSAPublicKey')]"
+                            }
+                        ]
+                    }
+                },
+                "servicePrincipalProfile": {
+                    "clientId": "[parameters('servicePrincipalClientId')]",
+                    "Secret": "[parameters('servicePrincipalClientSecret')]"
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "controlPlaneFQDN": {
+            "type": "string",
+            "value": "[reference(parameters('clusterName')).fqdn]"
+        }
+    }
+}
